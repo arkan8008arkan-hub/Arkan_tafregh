@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>برنامج التفريغ والقياسات</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f5;color:#17202a;font-family:Arial,Tahoma,sans-serif}
+.wrap{max-width:980px;margin:auto;padding:16px}
+header{background:#111827;color:#fff;border-radius:18px;padding:20px;margin-bottom:14px}
+header h1{margin:0 0 7px;font-size:25px} header p{margin:0;opacity:.85}
+.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 3px 14px #00000012}
+h2{margin:0 0 14px;font-size:21px}.sub{font-weight:700;margin:15px 0 8px}
+.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap;width:auto;background:#e5e7eb;color:#111827}
+.tabs button.active{background:#111827;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field label{display:block;font-weight:700;margin-bottom:6px}
+input,select,button{width:100%;padding:12px;border:1px solid #cfd5dd;border-radius:11px;font-size:16px;background:#fff}
+button{border:0;background:#111827;color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:#6b7280}
+.result{margin-top:14px;padding:15px;border-radius:13px;background:#f6f7f9;line-height:2;font-size:18px}
+.result strong{font-size:19px}.note{font-size:14px;color:#667085;margin-top:8px}
+.hidden{display:none}
+.row-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.row-actions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>Arkan Tafregh</h1>
+
+</header>
+
+<div class="card">
+<h2>1 — تفريغ PVC</h2>
+<div class="grid">
+<div class="field"><label>نوع PVC</label>
+<select id="pvcType" onchange="pvcMode=this.value; clearBox('pvcResult')">
+<option value="empty">مفرغة</option>
+<option value="talaaka">طلاكة</option>
+<option value="pob">بوب</option>
+</select>
+</div>
+<div class="field"><label>عرض مكان الجرجوب</label><input id="pvcW" type="number" step="0.1"></div>
+<div class="field"><label>ارتفاع مكان الجرجوب</label><input id="pvcH" type="number" step="0.1"></div>
+</div>
+<div class="row-actions"><button onclick="calcPVC()">احسب التفريغ</button><button class="secondary" onclick="clearBox('pvcResult')">مسح</button></div>
+<div id="pvcResult" class="result hidden"></div>
+
+</div>
+
+<div class="card">
+<h2>2 — السلايت ألمنيوم</h2>
+<div class="grid">
+<div class="field"><label>نوع السلايت</label>
+<select id="slateType" onchange="updateScreenRule()">
+<option value="tek">جرخ تك</option><option value="double">دبل جرخ</option><option value="2line">2 خط</option>
+</select></div>
+<div class="field"><label>مانع ذباب</label><select id="screen"><option value="no">لا</option><option value="yes">نعم</option></select></div>
+<div class="field"><label>عرض الجرجوب</label><input id="slW" type="number" step="0.1"></div>
+<div class="field"><label>ارتفاع الجرجوب</label><input id="slH" type="number" step="0.1"></div>
+</div>
+<div class="row-actions"><button onclick="calcSlate()">احسب السلايت</button><button class="secondary" onclick="clearBox('slResult')">مسح</button></div>
+<div id="slResult" class="result hidden"></div>
+
+</div>
+
+<div class="card">
+<h2>3 — أبواب الانترسات</h2>
+<div class="grid">
+
+<div class="field"><label>PT / بي تي</label><select id="pt"><option value="no">لا</option><option value="yes">نعم</option></select></div>
+<div class="field"><label>العرض — الجهة اليمنى</label><input id="doorW" type="number" step="0.1"></div>
+<div class="field"><label>الارتفاع — الجهة اليسرى</label><input id="doorH" type="number" step="0.1"></div>
+</div>
+<div class="row-actions"><button onclick="calcDoor()">احسب الباب</button><button class="secondary" onclick="clearBox('doorResult')">مسح</button></div>
+<div id="doorResult" class="result hidden"></div>
+
+</div>
+
+<div class="card">
+<h2>4 — تفريغ جام السلايت</h2>
+<div class="grid">
+<div class="field"><label>نوع الجام</label>
+<select id="glassType" onchange="glassMode=this.value; clearBox('glassResult')">
+<option value="tek">تك جام</option>
+<option value="double">دبل جام</option>
+</select>
+</div>
+</div>
+<div class="grid">
+<div class="field"><label>عرض السلايت</label><input id="glassW" type="number" step="0.1"></div>
+<div class="field"><label>ارتفاع السلايت</label><input id="glassH" type="number" step="0.1"></div>
+</div>
+<div class="row-actions"><button onclick="calcGlass()">احسب قياس الجامة</button><button class="secondary" onclick="clearBox('glassResult')">مسح</button></div>
+<div id="glassResult" class="result hidden"></div>
+
+</div>
+</div>
+
+<script>
+let pvcMode='empty', glassMode='tek';
+
+function num(id){return parseFloat(document.getElementById(id).value)}
+function valid(a,b){return Number.isFinite(a)&&Number.isFinite(b)}
+function show(id,html){const e=document.getElementById(id);e.innerHTML=html;e.classList.remove('hidden')}
+function clearBox(id){const e=document.getElementById(id);e.innerHTML='';e.classList.add('hidden')}
+function fmt(x){return (Math.floor((Number(x)+1e-9)*10)/10).toFixed(1)}
+
+function pvcTab(mode,btn){
+ pvcMode=mode;
+ document.querySelectorAll('#pvcTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+ clearBox('pvcResult');
+}
+function calcPVC(){
+ const w=num('pvcW'), h=num('pvcH');
+ if(!valid(w,h)) return show('pvcResult','أدخل عرض وارتفاع مكان الجرجوب.');
+
+ const cutW=w+0.6, cutH=h+0.6;
+ const zW=cutW-6.4, zH=cutH-6.2;
+ const title=pvcMode==='empty'?'مفرغة':pvcMode==='talaaka'?'طلاكة':'بوب';
+
+ if(pvcMode==='pob'){
+   show('pvcResult',
+   `<strong>${title}</strong><br>
+   الجرجوب: ${fmt(cutW)} × ${fmt(cutH)}<br>
+   Z: العرض ${fmt(zW)} | الارتفاع ${fmt(zH)}`);
+ }else{
+   show('pvcResult',
+   `<strong>${title}</strong><br>
+   الجرجوب: ${fmt(cutW)} × ${fmt(cutH)}<br>
+   Z: لا يوجد`);
+ }
+}
+function updateScreenRule(){}
+function calcSlate(){
+ const w=num('slW'),h=num('slH'),type=document.getElementById('slateType').value;
+ const hasScreen=document.getElementById('screen').value==='yes';
+ if(!valid(w,h)) return show('slResult','أدخل عرض وارتفاع الجرجوب.');
+
+ let sw,sh;
+
+ // جرخ تك: عرض السلايت = (عرض الجرجوب + 1) ÷ 2
+ // ارتفاع السلايت = ارتفاع الجرجوب - 6.7 سم
+ if(type==='tek'){
+   sw=(w+1)/2;
+   sh=h-6.7;
+ }
+ // دبل جرخ: عرض السلايت = (عرض الجرجوب + 1) ÷ 2
+ // ارتفاع السلايت = ارتفاع الجرجوب - 7.5 سم
+ else if(type==='double'){
+   sw=(w+1)/2;
+   sh=h-7.5;
+ }
+ // 2 خط
+ else if(type==='2line'){
+   sw=w/2;
+   sh=h-5.5;
+ }
+
+ const q=sh-0.3;
+
+ let result=`<strong>التفريغ</strong><br>
+ الجرجوب: ${fmt(w)} × ${fmt(h)}<br>
+ السلايت: العرض ${fmt(sw)} = 4 | الارتفاع ${fmt(sh)} = 4<br>
+ القبق: ${fmt(q)}`;
+
+ // مانع الذباب مستقل عن التفريغ:
+ // تك: العرض = الجرجوب ÷ 2، والارتفاع = نفس ارتفاع السلايت (h - 6.7)
+ // دبل: العرض = الجرجوب ÷ 2، والارتفاع = الجرجوب - 6.7
+ // 2 خط: العرض = الجرجوب ÷ 2، والارتفاع = نفس ارتفاع السلايت.
+ if(hasScreen){
+   const mosquitoW=w/2;
+   let mosquitoH;
+   if(type==='double'){
+     mosquitoH=h-6.7;
+   }else{
+     mosquitoH=sh;
+   }
+
+   result += `<hr style="border:0;border-top:1px solid #d9dde3;margin:12px 0">
+   <strong>مانع ذباب</strong><br>
+   العرض: ${fmt(mosquitoW)}<br>
+   الارتفاع: ${fmt(mosquitoH)}`;
+ }
+
+ show('slResult',result);
+}
+function calcDoor(){
+ const w=num('doorW'),h=num('doorH'),pt=document.getElementById('pt').value==='yes';
+ if(!valid(w,h)) return show('doorResult','أدخل عرض وارتفاع الجرجوب.');
+ const sw=w-5.7;
+ let sh=h-5.8;
+ if(pt && h>230) sh=210;
+ show('doorResult',`<strong>الباب</strong><br>Right / اليمين — العرض: ${fmt(w)}<br>Left / اليسار — الارتفاع: ${fmt(h)}<br>السلايت: ${fmt(sw)} = 2 | ${fmt(sh)} = 2<br>القبق: بدون قبق`);
+}
+
+function glassTab(mode,btn){
+ glassMode=mode;
+ document.querySelectorAll('#glassTabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+ clearBox('glassResult');
+}
+function calcGlass(){
+ const w=num('glassW'),h=num('glassH');
+ if(!valid(w,h)) return show('glassResult','أدخل عرض وارتفاع السلايت.');
+ glassMode=document.getElementById('glassType').value; const d=glassMode==='tek'?13:13.2;
+ show('glassResult',`<strong>${glassMode==='tek'?'تك جام':'دبل جام'}</strong><br>قياس الجامة: ${fmt(w-d)} × ${fmt(h-d)}`);
+}
+</script>
+</body>
+</html>
